@@ -2459,31 +2459,49 @@ end)
 Groupboxes.Stairwell_Misc = Tabs.Stairwell:AddLeftGroupbox("Exploits / Anti")
 Groupboxes.Stairwell_Experimental = Tabs.Stairwell:AddLeftGroupbox("Experimental")
 Groupboxes.Stairwell_Experimental:AddButton({
-    Text = "Bring Dropped Items",
-    Func = function()
-        local workspaceDropsFolder = workspace:FindFirstChild("Drops")
-
-        if LocalPlayer and LocalPlayer.Character then
-            local playerHumanoidRootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            
-            if playerHumanoidRootPart then
-                if workspaceDropsFolder then
-                    for _, itemToBring in ipairs(workspaceDropsFolder:GetChildren()) do
-                        if itemToBring:IsA("Model") then
-                            itemToBring:PivotTo(playerHumanoidRootPart.CFrame)
-                        elseif itemToBring:IsA("BasePart") then
-                            itemToBring.CFrame = playerHumanoidRootPart.CFrame
-                        end
-                    end
-                end
-            end
-        end
-    end,
-    DoubleClick = false,
-    Tooltip = "Brings all dropped items."
+	Text = "Bring Dropped Items",
+	Func = function() BringDroppedItems() end,
+	DoubleClick = false,
+	Tooltip = "Brings all dropped items."
 })
 
+Groupboxes.Stairwell_Experimental:AddToggle("EnableDroppedItemsInterval", {
+	Text = "Enable Interval",
+	Default = false,
+	Tooltip = "Automatically brings dropped items at the selected interval."
+})
+
+Groupboxes.Stairwell_Experimental:AddSlider("DroppedItemsInterval", {
+	Text = "Interval",
+	Default = 1,
+	Min = 0,
+	Max = 60,
+	Rounding = 1,
+	Compact = false,
+	Tooltip = "How often dropped items are brought."
+})
+
+Toggles.EnableDroppedItemsInterval:OnChanged(function(enabled)
+	if enabled then
+		if droppedItemsIntervalRunning then return end
+		droppedItemsIntervalRunning = true
+		task.spawn(function()
+			while Toggles.EnableDroppedItemsInterval.Value do
+				BringDroppedItems()
+				local interval = Options.DroppedItemsInterval.Value
+				if interval <= 0 then
+					task.wait()
+				else
+					task.wait(interval)
+				end
+			end
+			droppedItemsIntervalRunning = false
+		end)
+	end
+end)
+
 Groupboxes.Stairwell_Experimental:AddToggle("AntiNoise", { Text = "Anti Noise", Default = false, Tooltip = "Prevents the game from making noise when moving (Visual studio auto ai lmfao ✌)." })
+Groupboxes.Stairwell_Experimental:AddToggle("BypassNoise", { Text = "Noise Tv Breaker", Default = false, Tooltip = "Breaks the tv of noise while holding it." })
 
 Toggles.AntiNoise:OnChanged(function(value)
 	for i, conn in ipairs(Connections) do
@@ -2551,6 +2569,50 @@ Toggles.AntiNoise:OnChanged(function(value)
 
 	table.insert(Connections, antiNoiseConn)
 end)
+
+Toggles.BypassNoise:OnChanged(function(value)
+	for i = #Connections, 1, -1 do
+		local existingConnection = Connections[i]
+		if existingConnection and existingConnection.Disconnect then
+			existingConnection:Disconnect()
+		end
+		table.remove(Connections, i)
+	end
+	if not value then return end
+	local bypassNoiseLocalPlayerUserId = localUserId or (localPlayer and localPlayer.UserId) or (LocalPlayer and LocalPlayer.UserId)
+	local function checkBypassNoiseTvStand(targetTvStand)
+		if not targetTvStand:IsA("Model") then return end
+		if targetTvStand.Name ~= "TV_Stand" then return end
+		if targetTvStand:GetAttribute("LastPusherId") ~= bypassNoiseLocalPlayerUserId then return end
+		local tvStandCurrentCFrame = targetTvStand:GetPivot()
+		if tvStandCurrentCFrame.Position.Y > -119 then
+			targetTvStand:PivotTo(CFrame.new(tvStandCurrentCFrame.Position.X, -120, tvStandCurrentCFrame.Position.Z))
+			Functions.Notify({ Title = "Unequip the tv." })
+		end
+	end
+	local function checkBypassNoiseAllTvStands()
+		local bypassNoiseMiscFolder = workspace:FindFirstChild("Misc")
+		if not bypassNoiseMiscFolder then return end
+		for _, bypassNoiseMiscChild in ipairs(bypassNoiseMiscFolder:GetChildren()) do
+			checkBypassNoiseTvStand(bypassNoiseMiscChild)
+		end
+	end
+	local bypassNoiseMiscFolder = workspace:FindFirstChild("Misc")
+	if bypassNoiseMiscFolder then
+		local bypassNoiseMiscChildAddedConnection = bypassNoiseMiscFolder.ChildAdded:Connect(function(bypassNoiseNewChild)
+			task.wait(0.1)
+			checkBypassNoiseTvStand(bypassNoiseNewChild)
+		end)
+		Connections[#Connections + 1] = bypassNoiseMiscChildAddedConnection
+	end
+	task.spawn(function()
+		while Toggles.BypassNoise.Value do
+			checkBypassNoiseAllTvStands()
+			task.wait(1)
+		end
+	end)
+end)
+
 
 Groupboxes.Exploits_BypassRight = Tabs.Exploits:AddRightGroupbox("Bypass")
 Groupboxes.Exploits_BypassRight:AddToggle("DisableAnticheat", {
