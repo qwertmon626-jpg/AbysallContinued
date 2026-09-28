@@ -2458,6 +2458,24 @@ end)
 
 Groupboxes.Stairwell_Misc = Tabs.Stairwell:AddLeftGroupbox("Exploits / Anti")
 Groupboxes.Stairwell_Experimental = Tabs.Stairwell:AddLeftGroupbox("Experimental")
+
+
+local function BringDroppedItems()
+	local workspaceDropsFolder = workspace:FindFirstChild("Drops")
+	if LocalPlayer and LocalPlayer.Character then
+		local playerHumanoidRootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+		if playerHumanoidRootPart and workspaceDropsFolder then
+			for _, itemToBring in ipairs(workspaceDropsFolder:GetChildren()) do
+				if itemToBring:IsA("Model") then
+					itemToBring:PivotTo(playerHumanoidRootPart.CFrame)
+				elseif itemToBring:IsA("BasePart") then
+					itemToBring.CFrame = playerHumanoidRootPart.CFrame
+				end
+			end
+		end
+	end
+end
+
 Groupboxes.Stairwell_Experimental:AddButton({
 	Text = "Bring Dropped Items",
 	Func = function() BringDroppedItems() end,
