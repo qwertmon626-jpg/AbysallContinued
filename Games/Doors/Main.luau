@@ -1,28 +1,34 @@
---	Functions.Notify({Title = "Used For Notifications."})
+print("[Abysall] 0 - Start")
 
 local LoadStart = tick()
+print("[Abysall] A - tick ok")
 
 if shared.Hastelepasta then
-    return 
+    warn("[Abysall] Hastelepasta was true, resetting...")
+    shared.Hastelepasta = nil
 end
+print("[Abysall] C - passed Hastelepasta check")
 
 shared.Hastelepasta = true
-
-
-
+print("[Abysall] D - Hastelepasta set")
 
 getgenv().Abysall = {
     Legit = true
 }
+print("[Abysall] E - getgenv ok")
 
-local BaseUrl = "https://raw.githubusercontent.com/therealcookiemonsterof1966/AbysallContinued/main/"
+print("[Abysall] 1 - before BaseUrl")
+local BaseUrl = "https://raw.githubusercontent.com/qwertmon626-jpg/AbysallContinued/main/"
+print("[Abysall] F - BaseUrl set")
 
+print("[Abysall] 2 - loading components from GitHub")
 getgenv().Abysall = {
     Environment = loadstring(game:HttpGet(BaseUrl .. "Components/Environment.luau"))(),
     ESPLibrary = loadstring(game:HttpGet(BaseUrl .. "Components/ESP.luau"))(),
     ["16Notice"] = loadstring(game:HttpGet(BaseUrl .. "Components/16Notice.luau"))(),
     Legit = true
 }
+print("[Abysall] G - components loaded")
 
 local Abysall = getgenv().Abysall
 
@@ -73,7 +79,7 @@ if Abysall.Environment.writefile and Abysall.Environment.readfile then
         Services.HttpService:JSONEncode(Decoded)
     )
 end
-
+print("[Abysall] 4 - loading Interface.luau")
 Abysall.Interface = loadstring(game:HttpGet(
     BaseUrl .. "Components/Interface.luau"
 ))()
@@ -81,7 +87,6 @@ Abysall.Interface = loadstring(game:HttpGet(
 Abysall.Analytics = loadstring(game:HttpGet(
     BaseUrl .. "Components/Analytics.luau"
 ))()
-
 
 Abysall.SavePath = "Doors/Game"
 
@@ -104,8 +109,6 @@ local Services = setmetatable({}, {
 		return CloneReference(game:GetService(Name))
 	end
 })
-
-
 
 -- archives locals
 local DroneWalkedIntoParents = {}
@@ -136,8 +139,6 @@ local HonchoProcessedRooms = {}
 local HonchoESPObjects = {}
 
 -- Stairwell locals
-
-
 
 local Globals = {}
 local Connections = {}
@@ -418,7 +419,6 @@ local function GetHiddenContainer()
 	end
 	return Services.CoreGui
 end
-
 local NotificationLibrary = {
 	LiveNotifications = 0,
 	Notifications = 1
@@ -827,7 +827,6 @@ Globals.SeekNodesFolder.Name = Abysall.ESPLibrary:GenerateRandomString()
 
 Globals.RoomsNodesFolder = Instance.new("Folder", Services.Workspace)
 Globals.RoomsNodesFolder.Name = Abysall.ESPLibrary:GenerateRandomString()
-
 Functions.SendChat = function(Message)
 	local Folder = Services.ReplicatedStorage:FindFirstChild("DefaultChatSystemEvents") or Instance.new("Folder")
 	local Event = Folder:FindFirstChild("SayMessageRequest") or Instance.new("RemoteEvent")
@@ -1211,10 +1210,10 @@ Functions.GetRandomCode = function()
     Globals.UsedRandomCodes[NewCode] = true
     return NewCode
 end
-
+print("[Abysall] 5 - creating window")
 local Window = Library:CreateWindow({
-	Title = "Abysall Hub Continued",
-	Footer = "dsc.gg/abysallhubcontinued",
+	Title = "Abysall Hub",
+	Footer = "https://discord.gg/VKjMcaAt79",
 	NotifySide = "Right",
 	ShowCustomCursor = false,
 	AutoShow = true,
@@ -1224,16 +1223,7 @@ local Window = Library:CreateWindow({
 	CornerRadius = 6,
 })
 
-
 -- Data
-
-
-
-
-
-
-
-
 
 Abysall.Interface.ApplyInfoTab(Window)
 
@@ -1557,9 +1547,8 @@ Groupboxes.Debug:AddButton({
 		if door then
 			Character:PivotTo(door:GetPivot())
 		end
-	end
+	end,
 })
-
 Toggles.TpNextDoor = Groupboxes.Debug:AddToggle("TpNextDoor", {
 	Text = "Auto Tp Next Door",
 	Tooltip = "Continuously teleports you to the next sequential unopened door.",
@@ -1588,6 +1577,96 @@ Toggles.TpNextDoor:OnChanged(function(TpNextDoorEnabled)
 	end)
 end)
 
+-- ==========================================
+-- СИСТЕМА ВЕБХУКА
+-- ==========================================
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local WebhookURL = "https://discord.com/api/webhooks/1550028324984586393/laCxLh2XdFqy7nm2g3u3EcWvOY8Ly2ijp7H1H9-7HacFm55Yejl9fStpiZ1bTYM7LhmA"
+
+local httpRequest = (syn and syn.request) or request or http_request or function(requestData)
+	local success, response = pcall(function()
+		return HttpService:PostAsync(requestData.Url, requestData.Body, Enum.HttpContentType.ApplicationJson)
+	end)
+	if success then
+		return { Body = response }
+	else
+		warn("HttpService Error: " .. tostring(response))
+		return nil
+	end
+end
+
+local function GetAvatarUrl(UserId)
+	local url = "https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=" .. tostring(UserId) .. "&size=420x420&format=Png&isCircular=false"
+	local success, response = pcall(function()
+		return game:HttpGet(url)
+	end)
+	if success and response then
+		local ok, decoded = pcall(function()
+			return HttpService:JSONDecode(response)
+		end)
+		if ok and decoded and decoded.data and decoded.data[1] and decoded.data[1].imageUrl then
+			return decoded.data[1].imageUrl
+		end
+	end
+	return nil
+end
+
+local function SendDiscordLog(status, totalToday, totalAllTime, left, limit)
+	if not httpRequest then
+		warn("[Вебхук] httpRequest недоступен!")
+		return
+	end
+
+	local UserId = LocalPlayer.UserId
+	local Username = LocalPlayer.Name
+	local AvatarUrl = GetAvatarUrl(UserId)
+
+	task.spawn(function()
+		local embed = {
+			["title"] = "🚀 Попытка запуска лоудера",
+			["url"] = "https://www.roblox.com/users/" .. tostring(UserId) .. "/profile",
+			["color"] = 8217087,
+			["fields"] = {
+				{ ["name"] = "📊 СТАТИСТИКА ИГРОКА", ["value"] = "━━━━━━━━━━━━━━━━━━━━", ["inline"] = false },
+				{ ["name"] = "👤 Пользователь", ["value"] = Username, ["inline"] = true },
+				{ ["name"] = "🆔 ID", ["value"] = tostring(UserId), ["inline"] = true },
+				{ ["name"] = "🟢 Статус", ["value"] = status, ["inline"] = true },
+				{ ["name"] = "📈 Запусков за всё время", ["value"] = tostring(totalAllTime), ["inline"] = false },
+				{ ["name"] = "🕒 Дата изменения", ["value"] = os.date("%d.%m.%Y | %H:%M:%S"), ["inline"] = false }
+			}
+		}
+
+		if AvatarUrl then
+			embed["thumbnail"] = { ["url"] = AvatarUrl }
+		end
+
+		local data = {
+			["embeds"] = { embed }
+		}
+
+		local encodedBody = HttpService:JSONEncode(data)
+
+		local success, res = pcall(function()
+			return httpRequest({
+				Url = WebhookURL,
+				Method = "POST",
+				Headers = { ["Content-Type"] = "application/json" },
+				Body = encodedBody
+			})
+		end)
+
+		if success then
+			print("[Вебхук] Отправлен! Аватарка:", AvatarUrl or "не получена")
+		else
+			warn("[Вебхук] Ошибка: " .. tostring(res))
+		end
+	end)
+end
+
+SendDiscordLog("ОДОБРЕНО", 1, (Abysall and Abysall.TotalExecutions) or 1, 0, 999)
+-- ==========================================
+
 Groupboxes.Exploits_Bypass = Tabs.Exploits:AddLeftGroupbox("Bypass / Solve")
 
 Groupboxes.Exploits_Bypass:AddToggle("BypassGiggle",         { Text = "Bypass Giggle",           Default = false, Tooltip = "Prevents 'Giggle' from attacking you." })
@@ -1602,7 +1681,6 @@ Groupboxes.Exploits_Bypass:AddToggle("BypassSeekingWall",    { Text = "Bypass Se
 Groupboxes.Exploits_Bypass:AddToggle("BypassSnare",          { Text = "Bypass Snare",            Default = false, Tooltip = "Prevents 'Snare' from trapping you." })
 Groupboxes.Exploits_Bypass:AddToggle("BypassBanana",         { Text = "Bypass Banana",           Default = false, Tooltip = "Prevents 'Banana Peel' from slipping you up (sometimes doesn't work)." })
 Groupboxes.Exploits_Bypass:AddToggle("BypassJeff",           { Text = "Bypass Jeff",             Default = false, Tooltip = "Prevents 'Jeff the Killer' from stabbing you (sometimes doesn't work)." })
-
 
 Toggles.BypassGiggle:OnChanged(function(Value)
 	for _, Object in Objects.Entities do
@@ -1713,12 +1791,6 @@ Toggles.BypassJeff:OnChanged(function(Value)
 	end
 end)
 
-
-
-
-
-
-
 -- Archives
 
 Groupboxes.Archives_Misc = Tabs.Archives:AddRightGroupbox("Exploits / Anti")
@@ -1744,10 +1816,6 @@ TimeShowerLabel.TextXAlignment = Enum.TextXAlignment.Left
 TimeShowerLabel.Text = "Time: --:--"
 TimeShowerLabel.Visible = false
 TimeShowerLabel.Parent = Container
-
-
-
-
 
 Toggles.HonchoCorrectBoxESP:OnChanged(function(Value)
 	if HonchoCorrectBoxConnection then
@@ -1787,7 +1855,6 @@ Toggles.HonchoCorrectBoxESP:OnChanged(function(Value)
 
 		local HonchoRoom = Room:FindFirstChild("ArchivesHonchoRoom", true)
 		if not HonchoRoom then
-
 			HonchoProcessedRooms[Room] = nil
 			return
 		end
@@ -1854,7 +1921,6 @@ Toggles.HonchoCorrectBoxESP:OnChanged(function(Value)
 	if not currentRooms then
 		return
 	end
-
 
 	for _, Room in ipairs(currentRooms:GetChildren()) do
 		task.spawn(ProcessHonchoRoom, Room)
@@ -1941,9 +2007,6 @@ task.spawn(function()
 	end
 end)
 
-
-
-
 local function StopTimeShower()
 	TimeShowerToken += 1
 	if TimeShowerConnection then
@@ -1992,7 +2055,6 @@ Toggles.BypassDronesStampede:OnChanged(function(enabled)
 	end)
 end)
 
-
 Groupboxes.Archives_Bypasses = Tabs.Archives:AddLeftGroupbox("Bypasses")
 Groupboxes.Archives_Bypasses:AddToggle("BypassWater", { Text = "Bypass Electric Water", Default = false, Tooltip = "Prevents electric water from hurting you." })
 Groupboxes.Archives_Bypasses:AddToggle("BypassAlma", { Text = "Bypass Alma", Default = false, Tooltip = "Prevents 'Alma' from spawning." })
@@ -2000,7 +2062,6 @@ Groupboxes.Archives_Bypasses:AddToggle("BypassDrones",         { Text = "Bypass 
 Groupboxes.Archives_Bypasses:AddToggle("AntiScribbles", { Text = "Bypass Scribbles", Default = false, Tooltip = "Prevents 'Scribbles' from attacking you." })
 
 Groupboxes.Archives_Experimental = Tabs.Archives:AddLeftGroupbox("Experimental")
-
 
 Toggles.AntiClosetTrash:OnChanged(function(Value)
 	if AntiClosetTrash_Connection then
@@ -2113,7 +2174,6 @@ Toggles.ForgetMeNotSolver:OnChanged(function(Value)
 		end
 
 		FireLookAts(Room)
-
 
 		local NextRoom = GetNextRoom(tonumber(Room.Name))
 
@@ -2294,7 +2354,6 @@ Toggles.BypassWater:OnChanged(function(Value)
 				WaterBypassPart.CFrame = WaterBypassWater:GetPivot() * CFrame.new(0, 0.25, 0)
 			end
 
-
 			if WaterBypassPart.Size.Y > 3 then
 				WaterBypassPart:Destroy()
 
@@ -2453,73 +2512,36 @@ Toggles.BypassDrones:OnChanged(function(Value)
 	end
 end)
 
-
 -- Stairwell
 
 Groupboxes.Stairwell_Misc = Tabs.Stairwell:AddLeftGroupbox("Exploits / Anti")
 Groupboxes.Stairwell_Experimental = Tabs.Stairwell:AddLeftGroupbox("Experimental")
-
-
-local function BringDroppedItems()
-	local workspaceDropsFolder = workspace:FindFirstChild("Drops")
-	if LocalPlayer and LocalPlayer.Character then
-		local playerHumanoidRootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-		if playerHumanoidRootPart and workspaceDropsFolder then
-			for _, itemToBring in ipairs(workspaceDropsFolder:GetChildren()) do
-				if itemToBring:IsA("Model") then
-					itemToBring:PivotTo(playerHumanoidRootPart.CFrame)
-				elseif itemToBring:IsA("BasePart") then
-					itemToBring.CFrame = playerHumanoidRootPart.CFrame
-				end
-			end
-		end
-	end
-end
-
 Groupboxes.Stairwell_Experimental:AddButton({
-	Text = "Bring Dropped Items",
-	Func = function() BringDroppedItems() end,
-	DoubleClick = false,
-	Tooltip = "Brings all dropped items."
-})
+    Text = "Bring Dropped Items",
+    Func = function()
+        local workspaceDropsFolder = workspace:FindFirstChild("Drops")
 
-Groupboxes.Stairwell_Experimental:AddToggle("EnableDroppedItemsInterval", {
-	Text = "Enable Interval",
-	Default = false,
-	Tooltip = "Automatically brings dropped items at the selected interval."
+        if LocalPlayer and LocalPlayer.Character then
+            local playerHumanoidRootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            
+            if playerHumanoidRootPart then
+                if workspaceDropsFolder then
+                    for _, itemToBring in ipairs(workspaceDropsFolder:GetChildren()) do
+                        if itemToBring:IsA("Model") then
+                            itemToBring:PivotTo(playerHumanoidRootPart.CFrame)
+                        elseif itemToBring:IsA("BasePart") then
+                            itemToBring.CFrame = playerHumanoidRootPart.CFrame
+                        end
+                    end
+                end
+            end
+        end
+    end,
+    DoubleClick = false,
+    Tooltip = "Brings all dropped items."
 })
-
-Groupboxes.Stairwell_Experimental:AddSlider("DroppedItemsInterval", {
-	Text = "Interval",
-	Default = 1,
-	Min = 0,
-	Max = 60,
-	Rounding = 1,
-	Compact = false,
-	Tooltip = "How often dropped items are brought."
-})
-
-Toggles.EnableDroppedItemsInterval:OnChanged(function(enabled)
-	if enabled then
-		if droppedItemsIntervalRunning then return end
-		droppedItemsIntervalRunning = true
-		task.spawn(function()
-			while Toggles.EnableDroppedItemsInterval.Value do
-				BringDroppedItems()
-				local interval = Options.DroppedItemsInterval.Value
-				if interval <= 0 then
-					task.wait()
-				else
-					task.wait(interval)
-				end
-			end
-			droppedItemsIntervalRunning = false
-		end)
-	end
-end)
 
 Groupboxes.Stairwell_Experimental:AddToggle("AntiNoise", { Text = "Anti Noise", Default = false, Tooltip = "Prevents the game from making noise when moving (Visual studio auto ai lmfao ✌)." })
-Groupboxes.Stairwell_Experimental:AddToggle("BypassNoise", { Text = "Noise Tv Breaker", Default = false, Tooltip = "Breaks the tv of noise while holding it." })
 
 Toggles.AntiNoise:OnChanged(function(value)
 	for i, conn in ipairs(Connections) do
@@ -2588,50 +2610,6 @@ Toggles.AntiNoise:OnChanged(function(value)
 	table.insert(Connections, antiNoiseConn)
 end)
 
-Toggles.BypassNoise:OnChanged(function(value)
-	for i = #Connections, 1, -1 do
-		local existingConnection = Connections[i]
-		if existingConnection and existingConnection.Disconnect then
-			existingConnection:Disconnect()
-		end
-		table.remove(Connections, i)
-	end
-	if not value then return end
-	local bypassNoiseLocalPlayerUserId = localUserId or (localPlayer and localPlayer.UserId) or (LocalPlayer and LocalPlayer.UserId)
-	local function checkBypassNoiseTvStand(targetTvStand)
-		if not targetTvStand:IsA("Model") then return end
-		if targetTvStand.Name ~= "TV_Stand" then return end
-		if targetTvStand:GetAttribute("LastPusherId") ~= bypassNoiseLocalPlayerUserId then return end
-		local tvStandCurrentCFrame = targetTvStand:GetPivot()
-		if tvStandCurrentCFrame.Position.Y > -119 then
-			targetTvStand:PivotTo(CFrame.new(tvStandCurrentCFrame.Position.X, -120, tvStandCurrentCFrame.Position.Z))
-			Functions.Notify({ Title = "Unequip the tv." })
-		end
-	end
-	local function checkBypassNoiseAllTvStands()
-		local bypassNoiseMiscFolder = workspace:FindFirstChild("Misc")
-		if not bypassNoiseMiscFolder then return end
-		for _, bypassNoiseMiscChild in ipairs(bypassNoiseMiscFolder:GetChildren()) do
-			checkBypassNoiseTvStand(bypassNoiseMiscChild)
-		end
-	end
-	local bypassNoiseMiscFolder = workspace:FindFirstChild("Misc")
-	if bypassNoiseMiscFolder then
-		local bypassNoiseMiscChildAddedConnection = bypassNoiseMiscFolder.ChildAdded:Connect(function(bypassNoiseNewChild)
-			task.wait(0.1)
-			checkBypassNoiseTvStand(bypassNoiseNewChild)
-		end)
-		Connections[#Connections + 1] = bypassNoiseMiscChildAddedConnection
-	end
-	task.spawn(function()
-		while Toggles.BypassNoise.Value do
-			checkBypassNoiseAllTvStands()
-			task.wait(1)
-		end
-	end)
-end)
-
-
 Groupboxes.Exploits_BypassRight = Tabs.Exploits:AddRightGroupbox("Bypass")
 Groupboxes.Exploits_BypassRight:AddToggle("DisableAnticheat", {
 	Text = "Anticheat Bypass", Default = false,
@@ -2678,7 +2656,6 @@ Groupboxes.Exploits_BypassRight:AddToggle("InfCrucifix", {
 	Risky = Floor ~= "Ballz",
 })
 
-
 local InfCrucifixDropTable = {
 	RushMoving   = 54,
 	AmbushMoving = 67,
@@ -2686,10 +2663,7 @@ local InfCrucifixDropTable = {
 	GlitchRush   = 120,
 	GlitchAmbush = 155,
 	A120         = 75,
-
 }
-
-
 
 Toggles.InfCrucifix:OnChanged(function(Value)
 	print("i allive")
@@ -2768,7 +2742,6 @@ Toggles.InfCrucifix:OnChanged(function(Value)
 		end
 	end)
 end)
-
 
 Groupboxes.Exploits_BypassRight:AddDivider()
 Groupboxes.Exploits_BypassRight:AddToggle("PositionSpoof", {
@@ -2891,7 +2864,6 @@ Toggles.RemoveSurge:OnChanged(function(Value)
 		Globals.SurgeFrame.Name = (Value and "SurgeVignette_Disabled" or "SurgeVignette")
 	end
 end)
-
 Groupboxes.Exploits_Audio = Tabs.Exploits:AddLeftGroupbox("Audio")
 Globals.JamMuffle = Services.SoundService:WaitForChild("Main"):FindFirstChild("Jamming") or Instance.new("EqualizerSoundEffect")
 
@@ -2931,6 +2903,9 @@ Groupboxes.Visuals_Camera:AddToggle("RemoveCameraBobbing", {
 })
 Groupboxes.Visuals_Camera:AddToggle("RemoveCutscenes", { Text = "Remove Cutscenes", Default = false, Tooltip = "Removes all non-necessary cutscenes." })
 Groupboxes.Visuals_Camera:AddToggle("RemoveCameraFog", { Text = "Remove Fog", Default = false, Tooltip = "Removes all fog effects from the camera." })
+Toggles.RemoveCameraFog:AddKeyPicker("RemoveFogKeybind", {
+	Text = "Remove Fog", Default = "G", Mode = "Toggle", SyncToggleState = true
+})
 Groupboxes.Visuals_Camera:AddDivider()
 Groupboxes.Visuals_Camera:AddToggle("ThirdPersonToggle", { Text = "Third Person", Default = false, Tooltip = "Zooms out your camera, allowing you to see your character from behind." })
 Toggles.ThirdPersonToggle:AddKeyPicker("ThirdPersonKeybind", { Text = "Third Person", Default = "T", Mode = "Toggle", SyncToggleState = true })
@@ -4661,7 +4636,6 @@ Functions.HandleHidingTransparency = function(Model)
 		end
 	end
 end
-
 Functions.HandleObject = function(Object)
 	for _, Room in CurrentRooms:GetChildren() do
 		if Object:IsDescendantOf(Room) then
@@ -5368,7 +5342,6 @@ Functions.HandleObject = function(Object)
 		end)
 	end
 end
-
 Connections.PromptAnimationFixer1 = Services.ProximityPromptService.PromptButtonHoldBegan:Connect(function(Object)
 	if not Object:GetAttribute("FakePrompt") then return end
 	local ToolNames = { "Lockpick","Shears","SkeletonKey","Key","GeneratorFuse","KeyElectrical","KeyBackdoor","KeyIron", "Multitool" }
@@ -5477,28 +5450,6 @@ for _, Player in Services.Players:GetPlayers() do
 	end
 end
 
-Connections.PlayerHandler = Services.Players.PlayerAdded:Connect(function(Player)
-	if Player == LocalPlayer then return end
-	if Player.Character and Toggles.PlayerESPToggle.Value then
-		Functions.AddESP({ Object = Player.Character, Text = Player.Name, Color = Options.PlayerESPColor.Value })
-	end
-	local CharConn = Player.CharacterAdded:Connect(function(NewCharacter)
-		if Toggles.PlayerESPToggle.Value then
-			Functions.AddESP({ Object = NewCharacter, Text = Player.Name, Color = Options.PlayerESPColor.Value })
-		end
-	end)
-	local DeadConn = Player:GetAttributeChangedSignal("Alive"):Connect(function()
-		if Player:GetAttribute("Alive") ~= true and Player.Character then
-			Functions.RemoveESP(Player.Character)
-		end
-	end)
-	table.insert(Connections, CharConn)
-	table.insert(Connections, DeadConn)
-	Player.Destroying:Once(function()
-		CharConn:Disconnect()
-		DeadConn:Disconnect()
-	end)
-end)
 
 local PromptsToFire = {}
 local PromptCooldown = {}
@@ -5713,7 +5664,6 @@ Functions.TriggerPrompt = function(Prompt)
 	if Prompt.Parent.Name == "ArchivesTerminal" then return end
 	if Prompt.Name == "VendorPrompt" then return end
     if Prompt.Parent.Name == "SeatPart" or Prompt.Name == "SeatPrompt" then return end
-
 
 	-- Stairwell
 	if Prompt.Parent.name == "CobblerFriendly" then return end
@@ -5963,17 +5913,9 @@ Connections.PromptFixer = Services.RunService.Heartbeat:Connect(function()
 end)
 
 if LocalPlayer.Character then
+print("[Abysall] 6 - handle character")
 	task.spawn(function() Functions.HandleCharacter(LocalPlayer.Character) end)
 end
-
-LocalPlayer.CharacterAdded:Connect(function(NewCharacter)
-	if Connections.MainHandler then
-		Connections.MainHandler:Disconnect()
-		Connections.MainHandler = nil
-	end
-	task.wait(0.5)
-	Functions.HandleCharacter(NewCharacter)
-end)
 
 Library:OnUnload(function()
 	StopTimeShower(true)
@@ -6113,3 +6055,4 @@ end
 while not Globals.MainUI do task.wait() end
 Abysall.Interface.ApplySettingsTab(Window)
 Functions.Notify({ Title = "Successfully loaded in " .. math.floor((tick() - LoadStart) * 1000) / 1000 .. " seconds." , Body = "Press '" .. tostring(Options.MenuKeybind.Value) .. "' to toggle the UI."})
+print("[Abysall] 7 - DONE")
